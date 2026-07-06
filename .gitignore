@@ -1,0 +1,19 @@
+# 실제 접속정보 — 커밋 금지
+.env
+
+# Airflow 런타임 산출물
+logs/*
+!logs/.gitkeep
+plugins/*
+!plugins/.gitkeep
+airflow.cfg
+airflow.db
+standalone_admin_password.txt
+simple_auth_manager_passwords.json.generated
+webserver_config.py
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/

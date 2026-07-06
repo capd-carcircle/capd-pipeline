@@ -1,0 +1,4 @@
+# Airflow 자체는 docker-compose의 공식 이미지(apache/airflow)로 실행되므로 여기 없음.
+# 이 requirements.txt는 dags/ 안의 코드를 컨테이너 밖(로컬 파이썬)에서
+# 문법 확인·단위 테스트할 때만 필요.
+psycopg2-binary>=2.9,<3

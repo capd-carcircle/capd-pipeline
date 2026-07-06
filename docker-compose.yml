@@ -1,0 +1,29 @@
+# capd-pipeline — 로컬 Airflow (standalone 단일 컨테이너, 학습/증명용 — 프로덕션 규모 아님)
+#
+# `docker compose up -d` 후 몇 분 뒤 http://localhost:8080 접속.
+# admin 계정 비밀번호는 컨테이너 로그 또는
+#   docker compose exec airflow cat /opt/airflow/simple_auth_manager_passwords.json.generated
+# (Airflow 버전에 따라 standalone_admin_password.txt일 수 있음 — README 참고)
+#
+# CAPD_DB_URL / SLACK_WEBHOOK_URL은 .env 파일로 주입(.env.example 참고, 커밋 금지).
+services:
+  airflow:
+    image: apache/airflow:2.9.3-python3.11
+    container_name: capd_pipeline_airflow
+    command: standalone
+    ports:
+      - "8080:8080"
+    environment:
+      AIRFLOW__CORE__EXECUTOR: SequentialExecutor
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "true"
+      # 배치 DAG가 psycopg2로 직접 접속할 CAPD 공유 DB (Supabase). .env에서 주입.
+      CAPD_DB_URL: ${CAPD_DB_URL:?CAPD_DB_URL을 .env에 설정하세요}
+      SLACK_WEBHOOK_URL: ${SLACK_WEBHOOK_URL:-}
+      # 공식 이미지가 컨테이너 기동 시 자동 설치 (로컬 데모용 — 프로덕션에서는 커스텀 이미지 권장)
+      _PIP_ADDITIONAL_REQUIREMENTS: "psycopg2-binary==2.9.9"
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./logs:/opt/airflow/logs
+      - ./plugins:/opt/airflow/plugins
+    restart: unless-stopped
