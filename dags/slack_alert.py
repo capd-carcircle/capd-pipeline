@@ -12,6 +12,24 @@ import urllib.request
 
 logger = logging.getLogger(__name__)
 
+# ANALYTICS_ENGINE.ANOMALY_ATTRS(analytics_engine.py 400번째 줄 부근) 7개와 1:1 동일 —
+# frontend PatientAnalyticsPage.tsx의 ATTR_LABEL과 라벨 텍스트를 맞춰서 화면·알림 표기가 어긋나지 않게 함.
+ATTR_LABEL_KO: dict[str, str] = {
+    "body_weight_kg":         "체중",
+    "calculated_uf_sum_g":    "제수량 합",
+    "systolic_bp":            "수축기 혈압",
+    "diastolic_bp":           "이완기 혈압",
+    "mean_arterial_pressure": "평균 동맥압",
+    "fasting_blood_sugar":    "공복 혈당",
+    "infused_sum_g":          "주입량 합",
+}
+
+
+def _attr_label(attr: str) -> str:
+    """컬럼명만으로는 뭘 뜻하는지 안 와닿아서, 매핑에 있으면 한국어 의미를 병기."""
+    ko = ATTR_LABEL_KO.get(attr)
+    return f"{ko}({attr})" if ko else attr
+
 
 def build_message(anomalies: list[dict]) -> str:
     """이상치 있는 환자 목록 -> Slack 메시지 텍스트 (mrkdwn)."""
@@ -20,7 +38,7 @@ def build_message(anomalies: list[dict]) -> str:
 
     lines = [f"🔴 CAPD 일일 롤업 — 이상치 감지 환자 {len(anomalies)}명"]
     for a in anomalies:
-        attrs = ", ".join(a["anomaly_attrs"])
+        attrs = ", ".join(_attr_label(attr) for attr in a["anomaly_attrs"])
         lines.append(
             f"• *{a['patient_name']}* (환자 #{a['patient_id']}) — {a['record_date']} — {attrs}"
         )
