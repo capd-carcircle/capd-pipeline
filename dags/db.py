@@ -176,23 +176,23 @@ def upsert_metrics(conn, patient_id: int, record_date, today_row: dict) -> None:
         )
 
 
-def upsert_analytics(conn, patient_id: int, record_date, result: dict) -> None:
+def upsert_analytics(conn, patient_id: int, record_date, window_days: int, result: dict) -> None:
     import json
 
     with conn.cursor() as cur:
         cur.execute(
             """
             INSERT INTO patient_daily_analytics (
-                patient_id, record_date,
+                patient_id, record_date, window_days,
                 trend_json, anomaly_json, correlation_json, eda_json,
                 has_anomaly, anomaly_attrs, computed_at
             ) VALUES (
-                %(patient_id)s, %(record_date)s,
+                %(patient_id)s, %(record_date)s, %(window_days)s,
                 %(trend_json)s::jsonb, %(anomaly_json)s::jsonb,
                 %(correlation_json)s::jsonb, %(eda_json)s::jsonb,
                 %(has_anomaly)s, %(anomaly_attrs)s, NOW()
             )
-            ON CONFLICT (patient_id, record_date) DO UPDATE SET
+            ON CONFLICT (patient_id, record_date, window_days) DO UPDATE SET
                 trend_json       = EXCLUDED.trend_json,
                 anomaly_json     = EXCLUDED.anomaly_json,
                 correlation_json = EXCLUDED.correlation_json,
@@ -204,6 +204,7 @@ def upsert_analytics(conn, patient_id: int, record_date, result: dict) -> None:
             {
                 "patient_id": patient_id,
                 "record_date": record_date,
+                "window_days": window_days,
                 "trend_json": json.dumps(result.get("trend_analysis"), ensure_ascii=False),
                 "anomaly_json": json.dumps(result.get("anomaly_detection"), ensure_ascii=False),
                 "correlation_json": json.dumps(result.get("attribute_correlation"), ensure_ascii=False),

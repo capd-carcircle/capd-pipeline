@@ -67,7 +67,7 @@ def _rollup_all_patients(**context) -> list[dict]:
                 result = run_all_tasks(today_row, historical_rows, window=WINDOW)
 
                 db.upsert_metrics(conn, patient_id, today_record["record_date"], today_row)
-                db.upsert_analytics(conn, patient_id, today_record["record_date"], result)
+                db.upsert_analytics(conn, patient_id, today_record["record_date"], len(historical_rows), result)
                 conn.commit()
 
                 if result.get("has_anomaly"):
