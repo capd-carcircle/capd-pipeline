@@ -31,17 +31,39 @@ def _attr_label(attr: str) -> str:
     return f"{ko}({attr})" if ko else attr
 
 
+_UNASSIGNED_LABEL = "담당의 미배정"
+
+
 def build_message(anomalies: list[dict]) -> str:
-    """이상치 있는 환자 목록 -> Slack 메시지 텍스트 (mrkdwn)."""
+    """이상치 있는 환자 목록 -> Slack 메시지 텍스트 (mrkdwn).
+
+    담당의별로 그룹핑해서 표시 — 의사 입장에서 "내 담당 환자 중 누가 이상치인지"를
+    한눈에 보게 하려는 목적(차원 요청, 2026-07-07). 각 환자 항목의 doctor_name은
+    db.fetch_active_patients()가 users.doctor_id로 조인해서 채워준 값 — 담당의가
+    없으면 None이라 _UNASSIGNED_LABEL 그룹으로 묶임.
+    """
     if not anomalies:
         return "✅ CAPD 일일 롤업 완료 — 오늘 이상치 있는 환자 없음."
 
-    lines = [f"🔴 CAPD 일일 롤업 — 이상치 감지 환자 {len(anomalies)}명"]
+    groups: dict[str, list[dict]] = {}
     for a in anomalies:
-        attrs = ", ".join(_attr_label(attr) for attr in a["anomaly_attrs"])
-        lines.append(
-            f"• *{a['patient_name']}* (환자 #{a['patient_id']}) — {a['record_date']} — {attrs}"
-        )
+        key = a.get("doctor_name") or _UNASSIGNED_LABEL
+        groups.setdefault(key, []).append(a)
+
+    # 담당의 미배정 그룹은 맨 뒤로, 나머지는 이름 가나다순 — 매번 순서가 안 흔들리게.
+    doctor_names = sorted(k for k in groups if k != _UNASSIGNED_LABEL)
+    if _UNASSIGNED_LABEL in groups:
+        doctor_names.append(_UNASSIGNED_LABEL)
+
+    lines = [f"🔴 CAPD 일일 롤업 — 이상치 감지 환자 {len(anomalies)}명"]
+    for doctor_name in doctor_names:
+        label = doctor_name if doctor_name == _UNASSIGNED_LABEL else f"{doctor_name} 선생님"
+        lines.append(f"\n*{label}*")
+        for a in groups[doctor_name]:
+            attrs = ", ".join(_attr_label(attr) for attr in a["anomaly_attrs"])
+            lines.append(
+                f"• {a['patient_name']} (환자 #{a['patient_id']}) — {a['record_date']} — {attrs}"
+            )
     return "\n".join(lines)
 
 

@@ -24,13 +24,21 @@ def get_conn():
 
 
 def fetch_active_patients(conn) -> list[dict]:
-    """role=patient, is_active=true인 전체 환자 (담당의 배정 여부와 무관 — 배치는 스코프 없음)."""
+    """role=patient, is_active=true인 전체 환자 (담당의 배정 여부와 무관 — 스캔 대상 자체는 스코프 없음).
+
+    Slack 알림을 담당의별로 묶어 보여주기 위해 현재 담당의(doctor_id/doctor_name)도
+    같이 조회함(1건 쿼리로 배치, N+1 방지). users.doctor_id는 현재 담당의를 가리키는
+    비정규화 캐시 필드 — backend patients.py의 접근권한 체크가 patient_doctor_assignments를
+    우선하고 이 필드는 레거시 폴백으로 쓰는 것과 달리, 여기서는 "누구 담당인지 표시"만
+    목적이라 이 필드 하나로 충분(접근권한 판단에 쓰는 게 아님).
+    """
     with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
         cur.execute("""
-            SELECT id, name
-            FROM users
-            WHERE role = 'patient' AND is_active = TRUE
-            ORDER BY id
+            SELECT p.id, p.name, p.doctor_id, d.name AS doctor_name
+            FROM users p
+            LEFT JOIN users d ON d.id = p.doctor_id
+            WHERE p.role = 'patient' AND p.is_active = TRUE
+            ORDER BY p.id
         """)
         return list(cur.fetchall())
 

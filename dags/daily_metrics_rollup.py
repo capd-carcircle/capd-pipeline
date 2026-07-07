@@ -45,6 +45,8 @@ def _rollup_all_patients(**context) -> list[dict]:
         for patient in patients:
             patient_id = patient["id"]
             patient_name = patient["name"]
+            doctor_id = patient.get("doctor_id")
+            doctor_name = patient.get("doctor_name")
             try:
                 records = db.fetch_recent_records(conn, patient_id, WINDOW + 1)
                 if not records:
@@ -74,6 +76,8 @@ def _rollup_all_patients(**context) -> list[dict]:
                     anomalies.append({
                         "patient_id": patient_id,
                         "patient_name": patient_name,
+                        "doctor_id": doctor_id,
+                        "doctor_name": doctor_name,
                         "record_date": today_record["record_date"].isoformat(),
                         "anomaly_attrs": result.get("anomaly_attrs", []),
                     })
